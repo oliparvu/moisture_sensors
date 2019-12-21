@@ -5,7 +5,7 @@
 #define HOME 0
 #define OUT 1
 
-#define SENSOR 3
+#define SENSOR 1
 #define LOCATION HOME
 
 
@@ -50,7 +50,7 @@ constexpr auto wifi_password = "marlboro";
 typedef struct SensorData_t {
 	uint16_t uwAdcVal;
 	float fVoltage;
-	float fComputedValue;
+	uint8_t fComputedValue;
 };
 
 //SensorData_t stSensorData;
@@ -109,7 +109,7 @@ void loop()
 
 #if SENSOR == 1
 	Serial.print("entering deep sleep");
-	ESP.deepSleep(600 * SECONDS);
+	ESP.deepSleep(3600 * SECONDS);
 #elif SENSOR == 2
 #elif SENSOR == 3
 #endif
@@ -184,7 +184,7 @@ void GetSensorData(SensorData_t *pstSenData)
 #endif
 
 	
-	pstSenData->fComputedValue = ComputeMoisturePercentage(pstSenData->uwAdcVal);
+	pstSenData->fComputedValue = ComputeMoisturePercentage(pstSenData->fVoltage);
 
 }
 
@@ -217,31 +217,29 @@ void send_mqtt_data(SensorData_t* pstSenData)
 
 }
 
-uint8_t ComputeMoisturePercentage(const uint16_t uwInRaw)
+uint8_t ComputeMoisturePercentage(const float fInVolt)
 {//WIP
-	uint16_t uwValueToConvert;
+	float fValueToConvert;
 	uint8_t ubRetVal;
 
 	Serial.println("Start");
-	Serial.println(uwInRaw);
-	if (uwInRaw >= 1000) //very dry case. max recorded in air was ~900
+	Serial.println(fInVolt);
+
+	if (2.7f < fInVolt)
 	{
-		uwValueToConvert = 1000;
+		fValueToConvert = 2.7f;
 	}
 	else
-	{
-		if (uwInRaw < 500)//max value obtained in water. no point going below.
+		if (1.0f > fInVolt)
 		{
-			uwValueToConvert = 500;
+			fValueToConvert = 1.0f;
 		}
 		else
 		{
-			uwValueToConvert = uwInRaw;
+			fValueToConvert = fInVolt;
 		}
 
-	}
-	Serial.println(uwValueToConvert);
-	ubRetVal = 100 - (uwValueToConvert / 10);
+	ubRetVal =(uint8_t)( 100 - (((fValueToConvert -1)*1000) / 17));
 	Serial.println(ubRetVal);
 	return ubRetVal;
 	
